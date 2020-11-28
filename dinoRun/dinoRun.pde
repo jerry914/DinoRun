@@ -1,6 +1,10 @@
 import peasy.PeasyCam;
 PeasyCam cam;
 
+import processing.video.*;
+Movie video;
+int numPixels;
+
 import processing.sound.*;
 import java.nio.IntBuffer;
 PShader cubemapShader;
@@ -19,43 +23,62 @@ NetAddress myRemoteLocation;
 
 
 float time;
-PShape cactus, cactus2, rock1, rock2, cloud1, cloud2, sun;
+PShape cactusBig, cactus, cactus2, rock1, rock2, cloud1, cloud2, cloud3, sun;
 PShape road;
 PImage rd, ca, rk;
 Road[] roads=new Road[15];
 ArrayList<Cactus> cates = new ArrayList<Cactus>();
+ArrayList<Frame> frames = new ArrayList<Frame>();
 int lockTime = 2*200; //speed and pro
 int cactusDis;
 boolean onFloor=true;
 float dinoHeight=0;
 float dinoVel=0;
-float jumpVel = 2.5;
-float gravity = 0.09;
-int golbalSpeed = 2;
+float jumpVel = 3.5;
+float gravity = 0.05;
+int golbalSpeed = 1;
 boolean gameOver = false;
 int score = 0;
-PShape world;
-PImage panorama;
+PShape[] world = new PShape[4];
+PImage panorama, tex1, tex2;
+PImage[] frame = new PImage[3];
 
 SoundFile jump, die;
 
+boolean goDown = false;
+
+int gameMode = 0;
+
 void setup() {
   //size(1920, 900, P3D);
-  fullScreen(P3D,2);
+  fullScreen(P3D, 2);
   //cam = new PeasyCam(this, 100);
 
-  rock1=loadShape("data/mount.obj");
+  rock1=loadShape("data/mount2.obj");
+  rock2=loadShape("data/mount.obj");
+  cactusBig=loadShape("data/cactus_big.obj");
   cactus2=loadShape("data/bigcactus.obj");
   cloud1=loadShape("data/cloud1.obj");
   cloud2=loadShape("data/cloud2.obj");
+  cloud3=loadShape("data/cloud1.obj");
   cactus=loadShape("data/cactus.obj");
   sun = loadShape("data/sun.obj");
   jump= new SoundFile(this, "jump.mp3");
   die= new SoundFile(this, "demise.wav");
-  world=createShape(SPHERE, 1000);
+  for (int i=0; i<4; i++) {
+    world[i]=createShape(SPHERE, 1000);
+    world[i].setStroke(false);
+  }
+  frame[0] = loadImage("data/frame1.png");
+  frame[1] = loadImage("data/frame2.png");
+  frame[2] = loadImage("data/frame3.png");
   panorama=loadImage("data/day.png");
-  world.setTexture(panorama);
-  world.setStroke(false);
+  tex1=loadImage("data/tex1.png");
+  tex2=loadImage("data/tex2.png");
+  world[1].setTexture(panorama);
+  world[2].setTexture(tex1);
+  rock2.setTexture(tex1);
+  cloud3.setTexture(tex2);
   for (int i=0; i<15; i++) {
     roads[i]=new Road(i);
   }
@@ -65,22 +88,53 @@ void setup() {
   myRemoteLocation = new NetAddress("127.0.0.1", 12000);
 
   initCubeMap();
+  video = new Movie(this, "view1.mp4");
+  video.loop();
+  //video.stop();
+  //video = new Capture(this, 640, 480);
+  //video.start();
+  //numPixels = video.width * video.height;
+  colorMode(HSB, 255);
+  imageMode(CENTER);
 }
-
+void movieEvent(Movie m) {
+  m.read();
+}
 
 void draw() {
   time=1.0*frameCount/393.8;
   background(255);
-  //drawCubeMap();
-  
-  
+  drawCubeMap();
+  //draw3DView();
+}
+void draw3DView() {
   pushMatrix();
   translate(width/2, height*0.6-40, height/2+235);
-  shape(world);
-  //translate(954, 535, 82);
+  switch(gameMode) {
+  case 0:
+    WBView();
+    break;
+  case 1:
+    classicalView();
+    break;
+  case 2:
+    vanGoView();
+    break;
+  case 3:
+    realView();
+    break;
+  default:
+    WBView();
+    break;
+  }
+  lights();
+  directionalLight(255, 0, 255, 1, -42, 9);
+
+
   rotateX(PI*4.0);
   rotateY(0);
   rotateZ(0.0);
+
   if (!onFloor && !gameOver) {
     dinoVel-=gravity;
     dinoHeight+=dinoVel;
@@ -90,19 +144,25 @@ void draw() {
     translate(0, dinoHeight, 0);
   }
 
-  directionalLight(255, 255, 255, 1, -42, 9);
   scale(1, -1, 1);
   for (int i=0; i<cates.size(); i++) {
     Cactus cate = cates.get(i);
     if (!gameOver) {
       cate.display();
-      cate.checkDie();
+      //cate.checkDie();
       if (cate.finish()==1) {
         cates.remove(i);
       }
     } else {
       cate.speed=0;
       cate.display();
+    }
+  }
+  for (int i=0; i<frames.size(); i++) {
+    Frame fra = frames.get(i);
+    fra.display();
+    if (fra.finish()==1) {
+      frames.remove(i);
     }
   }
   if (!gameOver) {
@@ -121,29 +181,36 @@ void draw() {
     }
   }
 
-  if (!gameOver) {
-    fill(0, 0, 0); 
-    score = frameCount/10;
-  } else {
-    fill(255, 0, 0);
-  }
-  textSize(60);
-  text(str(score), width/2-textWidth(str(score))/2, 100);
   popMatrix();
 }
-
 void drawScene() {
   background(255);
   pushMatrix();
-  translate(zClippingPlane, zClippingPlane, 0);
-  shape(world);
+  translate(zClippingPlane, zClippingPlane+50, -300);
+  switch(gameMode) {
+  case 0:
+    WBView();
+    break;
+  case 1:
+    classicalView();
+    break;
+  case 2:
+    vanGoView();
+    break;
+  case 3:
+    realView();
+    break;
+  default:
+    WBView();
+    break;
+  }
+  lights();
+  directionalLight(255, 0, 255, 1, -42, 9);
 
-  pushMatrix();
-  //translate(width/2, height*0.6, height/2);
-  translate(-1, 50, -116);
   rotateX(PI*4.0);
-  rotateY(0);
+  //rotateY(PI/2);
   rotateZ(0.0);
+
   if (!onFloor && !gameOver) {
     dinoVel-=gravity;
     dinoHeight+=dinoVel;
@@ -152,20 +219,27 @@ void drawScene() {
     }
     translate(0, dinoHeight, 0);
   }
-  //drawAxis();
-  directionalLight(255, 255, 255, 67, -174, 60);
+
   scale(1, -1, 1);
+  
   for (int i=0; i<cates.size(); i++) {
     Cactus cate = cates.get(i);
     if (!gameOver) {
       cate.display();
-      cate.checkDie();
+      //cate.checkDie();
       if (cate.finish()==1) {
         cates.remove(i);
       }
     } else {
       cate.speed=0;
       cate.display();
+    }
+  }
+  for (int i=0; i<frames.size(); i++) {
+    Frame fra = frames.get(i);
+    fra.display();
+    if (fra.finish()==1) {
+      frames.remove(i);
     }
   }
   if (!gameOver) {
@@ -183,19 +257,28 @@ void drawScene() {
       roads[i].display();
     }
   }
-
-  if (!gameOver) {
-    fill(0, 0, 0); 
-    score = frameCount/10;
-  } else {
-    //fill(249, 142, 123);
-    fill(255);
-  }
-  textSize(60);
-  text(str(score), width/2-textWidth(str(score))/2, 100);
-  popMatrix();
   popMatrix();
 }
+
+void WBView() {
+  shape(world[0]);
+}
+
+void classicalView() {
+  shape(world[1]);
+}
+
+void vanGoView() {
+  shape(world[2]);
+}
+
+void realView() {
+  shape(world[3]);
+}
+void mouseClicked() {
+  frames.add(new Frame());
+}
+
 void keyPressed() {
   if (key==' ') {
     if (onFloor) {
@@ -204,18 +287,34 @@ void keyPressed() {
       dinoVel=jumpVel;
     }
   }
+  if (key==DOWN) {
+    goDown = true;
+  }
+  if (key =='1') {
+    gameMode=1;
+  } else if (key =='2') {
+    video.play();
+    gameMode=2;
+  } else if (key =='3') {
+    gameMode=3;
+  } else if (key =='0') {
+    gameMode=0;
+  }
+}
+
+void keyReleased() {
+  if (key==DOWN) {
+    goDown = false;
+  }
 }
 
 void oscEvent(OscMessage theOscMessage) {
-  //print("### received an osc message.");
-  //print(" addrpattern: "+theOscMessage.addrPattern());
-  //println(" typetag: "+theOscMessage.typetag());
   String pattern = theOscMessage.addrPattern();
   println(pattern);
   //float vel = float(pattern);
-  
+
   if (onFloor) {
-    jump.play();
+    jump.loop();
     onFloor = false;
     dinoVel=jumpVel;
   }

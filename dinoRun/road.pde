@@ -24,30 +24,70 @@ class Road {
     if (pos>1200) {
       pos=-1200;
     } else {
-      pos=pos+speed;   //speed
+      if (gameMode==2)
+        pos = pos+speed*2;
+      else
+        pos=pos+speed;   //speed
     }
     pushMatrix();
     translate(0, 0, pos);
-    if (type==1) {
-      pushMatrix();
-      scale(25);
-      shape(cactus2);
-      popMatrix();
+    pushMatrix();
+    switch(gameMode) {
+    case 0:
+      break;
+    case 1:
+      scale(51);
+      shape(rock1);
+      break;
+    case 2:
+      if (random(2)>0.5) {
+        rotateY(PI);
+      }
+      scale(51);
+      shape(rock2);
+      break;
+    case 3:
+      break;
+    default:
+      break;
     }
-    scale(51);
-    //shape(rock1);
-    noStroke();
+    popMatrix();
     pushMatrix();
     rotateX(PI/2);
-    translate(-50, 0, 0.001);
-    //if (!gameOver) {
-    //  fill(#FAEE8C);
-    //}
-    rect(0, 0, 100, 100);
+    translate(0, 0, 0.001);
+    if (!gameOver) {
+      switch(gameMode) {
+      case 0:
+        fill(100, 0, 255);
+        break;
+      case 1:
+        fill(#FAEE8C);
+        break;
+      case 2:
+        fill(#FAEE8C);
+        break;
+      case 3:
+        fill(100, 0, 255);
+        break;
+      default:
+        break;
+      }
+    }
+    noStroke();
+    rect(-width/2, 0, width, 400);
     popMatrix();
+    if (gameMode==2) {
+      scale(50*noise(pos));
+    } else
+      scale(50);
     translate(cloudX, 3, 0);
     scale(cloudSize);
-    shape(cloud1);
+    if (gameMode==0)
+      shape(cloud1);
+    else if (gameMode==1)
+      shape(cloud2);
+    else if (gameMode==2)
+      shape(cloud3);
     popMatrix();
   }
 }

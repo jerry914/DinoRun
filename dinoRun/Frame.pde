@@ -1,11 +1,9 @@
-class Cactus {
-
+class Frame {
   float pos;
   int speed=golbalSpeed;
-  Cactus() {
-    pos=-370;
+  Frame() {
+    pos=-1200;
   }
-
   void display() {
     if (gameMode==2)
       pos = pos+speed*2;
@@ -13,21 +11,21 @@ class Cactus {
       pos=pos+speed; 
     pushMatrix();
     translate(0, 0, pos);
-
+    rotateX(PI);
     switch(gameMode) {
     case 0:
-      scale(0.4);
-      shape(cactusBig);
+      image(frame[0], 0, -height/4, width/2, height/2);
       break;
     case 1:
-      scale(25);
-      shape(cactus);
+      image(frame[1], 0, -height/4, width/2, height/2);
       break;
     case 2:
-
+      pushMatrix();
+      image(video, 0, 0, width, height);
+      popMatrix();
+      image(frame[2], 0, -height/4, width/2, height/2);
       break;
     case 3:
-
       break;
     default:
       break;
@@ -41,11 +39,5 @@ class Cactus {
       return 1;
     }
     return 0;
-  }
-  void checkDie() {
-    if (pos>130&&pos<140 && onFloor) {
-      gameOver = true;
-      die.play();
-    }
   }
 }
